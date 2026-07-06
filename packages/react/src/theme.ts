@@ -19,7 +19,7 @@ const DEFAULTS = {
   surface: "#FFFFFF",
   text: "#18181B",
   secondaryText: "#71717A",
-  accent: "#6366F1", // indigo-500
+  accent: "#2E7272", // Slate Teal (brand primary)
   accentText: "#FFFFFF",
   border: "#E4E4E7",
   track: "#F4F4F5",
