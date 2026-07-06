@@ -1,0 +1,52 @@
+{
+  "name": "@microsurveys/react",
+  "version": "0.0.0",
+  "description": "React SDK for MicroSurveys — provider, hooks, and renderers for auto-triggered and inline in-app surveys.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MicroSurveysAI/microsurveys-web.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/MicroSurveysAI/microsurveys-web/tree/main/packages/react",
+  "keywords": ["microsurveys", "surveys", "react", "in-app", "nps", "csat", "feedback"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@microsurveys/web-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

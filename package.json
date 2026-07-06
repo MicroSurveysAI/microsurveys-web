@@ -1,0 +1,21 @@
+{
+  "name": "microsurveys-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MicroSurveys Web SDK — framework-agnostic browser runtime + framework adapters (React today; JS embed, Vue, Svelte next). Source of truth lives in the MicroSurveysSDK monorepo; mirrored to MicroSurveysAI/microsurveys-web and published to npm by the sync workflow.",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" build",
+    "test": "pnpm -r --filter \"./packages/*\" test",
+    "typecheck": "pnpm -r --filter \"./packages/*\" typecheck"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
