@@ -15,8 +15,8 @@ import { TriggerEngine } from "./triggerEngine";
 import { endUserIdOf } from "./types";
 import type { Identity, ProjectTheme, Survey, SurveyResult, Trigger } from "./types";
 
-/** Default API base — staging. Point at prod / self-hosted via `apiBaseURL`. */
-const DEFAULT_BASE_URL = "https://microsurveys.edubai.ventures";
+/** Default API base — production. Override via `apiBaseURL` for staging / self-hosted. */
+const DEFAULT_BASE_URL = "https://console.microsurveys.ai";
 /** How long a cached config is treated as fresh for foreground refresh. */
 const DEFAULT_CONFIG_TTL_MS = 30 * 60 * 1000;
 
