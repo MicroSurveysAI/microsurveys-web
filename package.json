@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "MicroSurveys Web SDK — framework-agnostic browser runtime + framework adapters (React today; JS embed, Vue, Svelte next). Source of truth lives in the MicroSurveysSDK monorepo; mirrored to MicroSurveysAI/microsurveys-web and published to npm by the sync workflow.",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=20"
   },
