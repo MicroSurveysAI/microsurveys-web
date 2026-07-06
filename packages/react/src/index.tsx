@@ -1,5 +1,5 @@
 //
-// @microsurveys/react
+// @microsurveysai/react
 //
 // React SDK for MicroSurveys. Wrap your app in <MicroSurveysProvider>, fire
 // events with useMicroSurveys().track(), and auto-triggered surveys present
@@ -19,4 +19,4 @@ export { MicroSurvey } from "./MicroSurvey";
 export type { MicroSurveyProps } from "./MicroSurvey";
 
 // Re-export the common wire types so consumers don't need a second import.
-export type { Survey, Question, SurveyResult, SurveyAnswer, AnswerValue, ProjectTheme } from "@microsurveys/web-core";
+export type { Survey, Question, SurveyResult, SurveyAnswer, AnswerValue, ProjectTheme } from "@microsurveysai/web-core";

@@ -12,20 +12,20 @@ framework-agnostic runtime.
 
 | Package | What it is |
 | --- | --- |
-| [`@microsurveys/web-core`](./packages/web-core) | Framework-agnostic browser runtime — on-device trigger evaluation, deterministic sampling, config cache, offline ingest. No UI. |
-| [`@microsurveys/react`](./packages/react) | React SDK — provider, hooks, auto-triggered overlay surveys, and inline `<MicroSurvey>`. |
+| [`@microsurveysai/web-core`](./packages/web-core) | Framework-agnostic browser runtime — on-device trigger evaluation, deterministic sampling, config cache, offline ingest. No UI. |
+| [`@microsurveysai/react`](./packages/react) | React SDK — provider, hooks, auto-triggered overlay surveys, and inline `<MicroSurvey>`. |
 
-Planned: `@microsurveys/js` (script-tag embed), `@microsurveys/vue`, `@microsurveys/svelte` — all
+Planned: `@microsurveysai/js` (script-tag embed), `@microsurveysai/vue`, `@microsurveysai/svelte` — all
 reusing `web-core` unchanged.
 
 ## Quick start (React)
 
 ```bash
-npm install @microsurveys/react
+npm install @microsurveysai/react
 ```
 
 ```tsx
-import { MicroSurveysProvider, useMicroSurveys } from "@microsurveys/react";
+import { MicroSurveysProvider, useMicroSurveys } from "@microsurveysai/react";
 
 function App() {
   return (
@@ -45,7 +45,7 @@ function Checkout() {
 Embed a specific survey inline (e.g. in a settings page):
 
 ```tsx
-import { MicroSurvey } from "@microsurveys/react";
+import { MicroSurvey } from "@microsurveysai/react";
 
 <MicroSurvey surveyId="svy_abc" onComplete={(r) => console.log(r)} />;
 ```

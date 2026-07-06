@@ -1,16 +1,16 @@
-# @microsurveys/react
+# @microsurveysai/react
 
 React SDK for [MicroSurveys](https://microsurveys.ai). Wrap your app in a provider, fire events, and
 targeted in-app surveys present themselves — or embed a specific survey inline.
 
 ```bash
-npm install @microsurveys/react
+npm install @microsurveysai/react
 ```
 
 ## Auto-triggered surveys
 
 ```tsx
-import { MicroSurveysProvider, useMicroSurveys } from "@microsurveys/react";
+import { MicroSurveysProvider, useMicroSurveys } from "@microsurveysai/react";
 
 export default function App({ children }) {
   return <MicroSurveysProvider apiKey="ms_live_…">{children}</MicroSurveysProvider>;
@@ -30,7 +30,7 @@ configuration.
 ## Inline surveys
 
 ```tsx
-import { MicroSurvey } from "@microsurveys/react";
+import { MicroSurvey } from "@microsurveysai/react";
 
 <MicroSurvey surveyId="svy_abc" onComplete={(result) => console.log(result)} />;
 ```

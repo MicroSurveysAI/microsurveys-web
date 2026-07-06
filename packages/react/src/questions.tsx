@@ -7,7 +7,7 @@
 // shapes). Styling is entirely via the `.ms-*` classes + theme CSS variables.
 //
 
-import type { AnswerValue, Question } from "@microsurveys/web-core";
+import type { AnswerValue, Question } from "@microsurveysai/web-core";
 
 export interface QuestionInputProps {
   question: Question;

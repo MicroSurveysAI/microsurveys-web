@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ActiveSurvey, MicroSurveysClient, SurveyResult } from "@microsurveys/web-core";
+import type { ActiveSurvey, MicroSurveysClient, SurveyResult } from "@microsurveysai/web-core";
 import { SurveyCard } from "./SurveyCard";
 import { resolveTheme, resolvePosition, ensureGoogleFont } from "./theme";
 import { ensureStyles } from "./styles";

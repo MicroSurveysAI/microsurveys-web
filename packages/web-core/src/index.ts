@@ -1,9 +1,9 @@
 //
-// @microsurveys/web-core
+// @microsurveysai/web-core
 //
 // Framework-agnostic browser runtime for MicroSurveys. Feed it events + identity
 // and it decides, on-device, when a survey is eligible and emits it for a UI
-// layer (e.g. @microsurveys/react) to render. A faithful port of the iOS SDK
+// layer (e.g. @microsurveysai/react) to render. A faithful port of the iOS SDK
 // runtime; the wire contract is docs/API-CONTRACT.md.
 //
 

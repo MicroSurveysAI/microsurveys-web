@@ -11,7 +11,7 @@
 //
 
 import type { CSSProperties } from "react";
-import type { ProjectTheme } from "@microsurveys/web-core";
+import type { ProjectTheme } from "@microsurveysai/web-core";
 
 /** iOS `SurveyTheme.default` light-mode palette + metrics. */
 const DEFAULTS = {

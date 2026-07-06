@@ -8,7 +8,7 @@
 //
 
 import { useMemo, useState } from "react";
-import type { AnswerValue, Survey, SurveyAnswer, SurveyResult } from "@microsurveys/web-core";
+import type { AnswerValue, Survey, SurveyAnswer, SurveyResult } from "@microsurveysai/web-core";
 import { QuestionInput, isAnswered } from "./questions";
 
 export interface SurveyCardProps {

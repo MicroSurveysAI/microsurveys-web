@@ -1,5 +1,5 @@
 {
-  "name": "@microsurveys/react",
+  "name": "@microsurveysai/react",
   "version": "0.0.0",
   "description": "React SDK for MicroSurveys — provider, hooks, and renderers for auto-triggered and inline in-app surveys.",
   "license": "MIT",
@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@microsurveys/web-core": "workspace:*"
+    "@microsurveysai/web-core": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18",

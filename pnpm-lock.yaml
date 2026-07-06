@@ -20,7 +20,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@microsurveys/web-core':
+      '@microsurveysai/web-core':
         specifier: workspace:*
         version: link:../web-core
     devDependencies:

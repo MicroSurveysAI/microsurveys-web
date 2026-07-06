@@ -1,5 +1,5 @@
 {
-  "name": "@microsurveys/web-core",
+  "name": "@microsurveysai/web-core",
   "version": "0.0.0",
   "description": "Framework-agnostic browser runtime for MicroSurveys — on-device trigger evaluation, deterministic sampling, config cache, and offline ingest.",
   "license": "MIT",

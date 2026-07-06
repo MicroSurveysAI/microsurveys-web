@@ -10,7 +10,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Survey, SurveyResult } from "@microsurveys/web-core";
+import type { Survey, SurveyResult } from "@microsurveysai/web-core";
 import { useMicroSurveysClient } from "./provider";
 import { SurveyCard } from "./SurveyCard";
 import { resolveTheme, ensureGoogleFont } from "./theme";

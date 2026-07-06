@@ -9,7 +9,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { createClient, type MicroSurveysClient } from "@microsurveys/web-core";
+import { createClient, type MicroSurveysClient } from "@microsurveysai/web-core";
 import { OverlayHost } from "./overlayHost";
 import { ensureStyles } from "./styles";
 
