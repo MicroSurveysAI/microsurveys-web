@@ -9,7 +9,7 @@
 import { Outbox } from "./outbox";
 import { uuid } from "./storage";
 import { parseConfig } from "./types";
-import type { SDKConfig, SurveyAnswer, JsonObject } from "./types";
+import type { SDKConfig, SurveyAnswer, JsonObject, DeviceContext } from "./types";
 
 const API_VERSION = "2026-06-30";
 
@@ -50,22 +50,28 @@ export class ApiClient {
 
   // ── Impressions / responses ─────────────────────────────────────────────────
 
+  /** Queues the impression and returns its `clientId`, so the response from the
+   *  same showing can point back to it. */
   recordImpression(input: {
     surveyId: string;
     triggerId: string | null;
     endUserId: string;
     shownAt: Date;
     dismissed: boolean;
-  }): void {
+    context: DeviceContext;
+  }): string {
+    const clientId = uuid();
     const payload = {
-      clientId: uuid(),
+      clientId,
       surveyId: input.surveyId,
       triggerId: input.triggerId ?? undefined,
       endUserId: input.endUserId,
       shownAt: input.shownAt.toISOString(),
       dismissed: input.dismissed,
+      context: input.context,
     };
     this.enqueue("/api/sdk/impressions", { impressions: [payload] });
+    return clientId;
   }
 
   recordResponse(input: {
@@ -74,6 +80,9 @@ export class ApiClient {
     completed: boolean;
     submittedAt: Date;
     userProps: JsonObject;
+    impressionId: string;
+    triggerId: string | null;
+    context: DeviceContext;
     answers: SurveyAnswer[];
   }): void {
     const payload = {
@@ -83,6 +92,9 @@ export class ApiClient {
       completed: input.completed,
       submittedAt: input.submittedAt.toISOString(),
       userProps: input.userProps,
+      impressionId: input.impressionId,
+      triggerId: input.triggerId ?? undefined,
+      context: input.context,
       answers: input.answers,
     };
     this.enqueue("/api/sdk/responses", { responses: [payload] });

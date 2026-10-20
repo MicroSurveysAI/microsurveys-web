@@ -22,16 +22,18 @@ export interface MicroSurveysProviderProps {
   apiBaseURL?: string;
   /** Refresh config on tab foreground. Default true. */
   refreshOnForeground?: boolean;
+  /** Your app's version (e.g. "3.2.0"), sent with responses so results can be compared across releases. */
+  appVersion?: string;
   /** Start automatically on mount. Default true. */
   autoStart?: boolean;
   children?: React.ReactNode;
 }
 
-export function MicroSurveysProvider({ apiKey, apiBaseURL, refreshOnForeground, autoStart = true, children }: MicroSurveysProviderProps) {
+export function MicroSurveysProvider({ apiKey, apiBaseURL, refreshOnForeground, appVersion, autoStart = true, children }: MicroSurveysProviderProps) {
   // Lazily create the client on the client only (localStorage/crypto are guarded,
   // but there's no reason to build one during SSR).
   const [client] = useState<MicroSurveysClient | null>(() =>
-    typeof window === "undefined" ? null : createClient({ apiKey, apiBaseURL, refreshOnForeground }),
+    typeof window === "undefined" ? null : createClient({ apiKey, apiBaseURL, refreshOnForeground, appVersion }),
   );
 
   useEffect(() => {

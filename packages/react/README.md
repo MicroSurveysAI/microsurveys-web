@@ -45,6 +45,7 @@ import { MicroSurvey } from "@microsurveysai/react";
 | `apiBaseURL` | `https://console.microsurveys.ai` | Override for self-hosted deployments. |
 | `autoStart` | `true` | Start on mount (fetch config, flush ingest). |
 | `refreshOnForeground` | `true` | Refresh config when the tab regains focus. |
+| `appVersion` | — | Your app's version (e.g. `"3.2.0"`), sent with responses so results can be compared across releases. |
 
 Next.js App Router: the package ships with `"use client"`, so you can render `<MicroSurveysProvider>`
 from a Server Component without extra wrapping.

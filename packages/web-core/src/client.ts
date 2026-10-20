@@ -13,7 +13,7 @@ import { ConfigStore, TriggerStateStore } from "./persistence";
 import { IdentityStore } from "./identity";
 import { TriggerEngine } from "./triggerEngine";
 import { endUserIdOf } from "./types";
-import type { Identity, ProjectTheme, Survey, SurveyResult, Trigger } from "./types";
+import type { DeviceContext, Identity, ProjectTheme, Survey, SurveyResult, Trigger } from "./types";
 
 /** Default API base. Override via `apiBaseURL` for self-hosted deployments. */
 const DEFAULT_BASE_URL = "https://console.microsurveys.ai";
@@ -30,6 +30,9 @@ export interface CreateClientOptions {
   refreshOnForeground?: boolean;
   /** This SDK's platform for survey targeting. Defaults to "web". */
   platform?: string;
+  /** Your app's version (e.g. "3.2.0"), sent with responses so results can be
+   *  compared across releases. Optional. */
+  appVersion?: string;
 }
 
 /** An auto-triggered survey the host should present. Call `close` exactly once
@@ -59,6 +62,8 @@ export class MicroSurveysClient {
   private readonly engine: TriggerEngine;
   private readonly configTTLms: number;
   private readonly refreshOnForeground: boolean;
+  private readonly platform: string;
+  private readonly appVersion: string | undefined;
 
   private readonly presentListeners = new Set<PresentListener>();
   private readonly configListeners = new Set<ConfigListener>();
@@ -70,12 +75,14 @@ export class MicroSurveysClient {
     this.api = new ApiClient(opts.apiKey, opts.apiBaseURL ?? DEFAULT_BASE_URL);
     this.configTTLms = opts.configTTLms ?? DEFAULT_CONFIG_TTL_MS;
     this.refreshOnForeground = opts.refreshOnForeground ?? true;
+    this.platform = opts.platform ?? "web";
+    this.appVersion = opts.appVersion;
     this.engine = new TriggerEngine({
       store: this.triggerStateStore,
       surveysProvider: () => this.configStore.surveys,
       identityProvider: () => this.identityStore.snapshot(),
       onPresent: (survey, trigger, identity) => this.handlePresent(survey, trigger, identity),
-      platform: opts.platform ?? "web",
+      platform: this.platform,
     });
   }
 
@@ -199,8 +206,16 @@ export class MicroSurveysClient {
     result: SurveyResult,
   ): void {
     const endUserId = endUserIdOf(identity);
+    const context = this.deviceContext();
     // Impression is finalized at close, so `dismissed` is authoritative.
-    this.api.recordImpression({ surveyId, triggerId, endUserId, shownAt, dismissed: result.dismissed });
+    const impressionId = this.api.recordImpression({
+      surveyId,
+      triggerId,
+      endUserId,
+      shownAt,
+      dismissed: result.dismissed,
+      context,
+    });
     // A pure dismissal (no answers) is an impression, NOT a response — don't
     // inflate the response count. Partial multi-step answers still count.
     if (result.completed || result.answers.length > 0) {
@@ -210,9 +225,18 @@ export class MicroSurveysClient {
         completed: result.completed,
         submittedAt: new Date(),
         userProps: identity.userProperties,
+        impressionId,
+        triggerId,
+        context,
         answers: result.answers,
       });
     }
+  }
+
+  /** Where this showing happened. Read at record time: the browser language can change. */
+  private deviceContext(): DeviceContext {
+    const locale = typeof navigator !== "undefined" ? navigator.language : undefined;
+    return { platform: this.platform, appVersion: this.appVersion, locale: locale || undefined };
   }
 }
 
