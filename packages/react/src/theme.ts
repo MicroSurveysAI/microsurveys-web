@@ -49,8 +49,46 @@ function px(n: number): string {
   return `${n}px`;
 }
 
+const COLOR_FN = /^(rgb|rgba|hsl|hsla)\(\s*[-+0-9.,%\s/]*\)$/i;
+
+/**
+ * A theme string is used only if it can't make the browser fetch anything or break out of its
+ * CSS value: no url()/image-set()/var() (plain rgb()/hsl() colors are fine), no CSS punctuation,
+ * quotes or backslashes. Anything else falls back to the default for that key.
+ */
+function safe(v: string | undefined): string | undefined {
+  if (typeof v !== "string" || v.length > 100) return undefined;
+  if (/[;:{}<>"'`\\@!]/.test(v)) return undefined;
+  if (v.includes("(") || v.includes(")")) return COLOR_FN.test(v.trim()) ? v : undefined;
+  return v;
+}
+
+/** A finite number kept within [lo, hi], or undefined. */
+function bounded(n: number | null | undefined, lo: number, hi: number): number | undefined {
+  return typeof n === "number" && Number.isFinite(n) ? Math.min(Math.max(n, lo), hi) : undefined;
+}
+
 export function resolveTheme(theme: ProjectTheme | null | undefined): ResolvedTheme {
-  const t = theme ?? {};
+  const raw = theme ?? {};
+  // Same bounds the server applies before sending the theme; real themes sit well inside them.
+  const t: ProjectTheme = {
+    ...raw,
+    accent: safe(raw.accent),
+    accentText: safe(raw.accentText),
+    surface: safe(raw.surface),
+    text: safe(raw.text),
+    secondaryText: safe(raw.secondaryText),
+    border: safe(raw.border),
+    font: safe(raw.font),
+    cornerRadius: bounded(raw.cornerRadius, 0, 200),
+    controlRadius: bounded(raw.controlRadius, 0, 200),
+    controlHeight: bounded(raw.controlHeight, 16, 200),
+    spacing: bounded(raw.spacing, 0, 200),
+    textScale: bounded(raw.textScale, 0.25, 4),
+    titleSize: bounded(raw.titleSize, 6, 120),
+    titleLineHeight: bounded(raw.titleLineHeight, 0.5, 5),
+    titleLetterSpacing: bounded(raw.titleLetterSpacing, -50, 50),
+  };
   const controlHeight = t.controlHeight ?? DEFAULTS.controlHeight;
   const controlRadius = t.controlPill ? controlHeight / 2 : (t.controlRadius ?? DEFAULTS.controlRadius);
   const cardRadius = t.cornerRadius ?? DEFAULTS.cardRadius;
