@@ -91,6 +91,14 @@ describe("ingest payloads", () => {
     expect("triggerId" in response).toBe(false);
   });
 
+  it("sends entries queued during a flush without waiting for the next one", async () => {
+    const api = new ApiClient("ms_test_x", "https://example.test");
+    api.recordImpression({ surveyId: "s", triggerId: null, endUserId: "u", shownAt: new Date(), dismissed: true, context: {} });
+    api.recordImpression({ surveyId: "s", triggerId: null, endUserId: "u", shownAt: new Date(), dismissed: true, context: {} });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(sent.filter((s) => s.path === "/api/sdk/impressions")).toHaveLength(2);
+  });
+
   it("sends the trigger that fired with the response", async () => {
     const api = new ApiClient("ms_test_x", "https://example.test");
     const impressionId = api.recordImpression({

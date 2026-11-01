@@ -17,6 +17,12 @@ export { TriggerEngine, passesFrequency } from "./triggerEngine";
 export type { TriggerEngineOptions } from "./triggerEngine";
 export { ConfigStore, TriggerStateStore } from "./persistence";
 export { IdentityStore } from "./identity";
+export { EventCounter } from "./eventCounter";
+export type { EventCount } from "./eventCounter";
+export { SDK_VERSION } from "./version";
+export { debugKey } from "./debug";
+export type { DebugEntry } from "./debug";
+export type { Decision, DecisionReason } from "./triggerEngine";
 export { parseConfig, endUserIdOf, newTriggerRecord, newUserTriggerState } from "./types";
 
 export type {

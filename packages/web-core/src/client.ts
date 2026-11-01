@@ -12,6 +12,10 @@ import { ApiClient } from "./apiClient";
 import { ConfigStore, TriggerStateStore } from "./persistence";
 import { IdentityStore } from "./identity";
 import { TriggerEngine } from "./triggerEngine";
+import { EventCounter, MAX_NAMES } from "./eventCounter";
+import { debugKey, debugProperties } from "./debug";
+import type { Decision } from "./triggerEngine";
+import { SDK_VERSION } from "./version";
 import { endUserIdOf } from "./types";
 import type { DeviceContext, Identity, ProjectTheme, Survey, SurveyResult, Trigger } from "./types";
 
@@ -19,6 +23,8 @@ import type { DeviceContext, Identity, ProjectTheme, Survey, SurveyResult, Trigg
 const DEFAULT_BASE_URL = "https://console.microsurveys.ai";
 /** How long a cached config is treated as fresh for foreground refresh. */
 const DEFAULT_CONFIG_TTL_MS = 30 * 60 * 1000;
+/** How often counted events are uploaded while event signals are on. */
+const EVENT_COUNTS_INTERVAL_MS = 60 * 1000;
 
 export interface CreateClientOptions {
   apiKey: string;
@@ -60,6 +66,10 @@ export class MicroSurveysClient {
   private readonly identityStore = new IdentityStore();
   private readonly triggerStateStore = new TriggerStateStore();
   private readonly engine: TriggerEngine;
+  private readonly eventCounter = new EventCounter();
+  private eventCountsTimer: ReturnType<typeof setInterval> | null = null;
+  /** Decisions collected while one event is processed, for the live debugger. */
+  private collecting: Decision[] | null = null;
   private readonly configTTLms: number;
   private readonly refreshOnForeground: boolean;
   private readonly platform: string;
@@ -83,6 +93,7 @@ export class MicroSurveysClient {
       identityProvider: () => this.identityStore.snapshot(),
       onPresent: (survey, trigger, identity) => this.handlePresent(survey, trigger, identity),
       platform: this.platform,
+      onDecision: (d) => this.handleDecision(d),
     });
   }
 
@@ -95,17 +106,26 @@ export class MicroSurveysClient {
     this.started = true;
     void this.api.flush();
     void this.refreshConfig();
-    if (this.refreshOnForeground && typeof document !== "undefined") {
+    if (typeof document !== "undefined") {
       this.foregroundHandler = () => {
-        if (document.visibilityState === "visible") this.refreshConfigIfStale();
+        if (document.visibilityState === "visible") {
+          if (this.refreshOnForeground) this.refreshConfigIfStale();
+        } else {
+          // The tab may not come back: send what was counted while it was open.
+          this.flushEventCounts();
+        }
       };
       document.addEventListener("visibilitychange", this.foregroundHandler);
     }
+    this.eventCountsTimer = setInterval(() => this.flushEventCounts(), EVENT_COUNTS_INTERVAL_MS);
   }
 
   /** Tear down listeners + pending timers. */
   stop(): void {
     this.engine.stop();
+    this.flushEventCounts();
+    if (this.eventCountsTimer) clearInterval(this.eventCountsTimer);
+    this.eventCountsTimer = null;
     if (this.foregroundHandler && typeof document !== "undefined") {
       document.removeEventListener("visibilitychange", this.foregroundHandler);
       this.foregroundHandler = null;
@@ -140,7 +160,53 @@ export class MicroSurveysClient {
   }
 
   track(name: string, properties: Record<string, unknown> = {}): void {
-    this.engine.process(name, properties);
+    if (this.configStore.eventSignals) {
+      this.eventCounter.record(name, properties);
+      if (this.eventCounter.size >= MAX_NAMES) this.flushEventCounts();
+    }
+    if (!this.isDebugDevice()) {
+      this.engine.process(name, properties);
+      return;
+    }
+    this.collecting = [];
+    try {
+      this.engine.process(name, properties);
+    } finally {
+      const decisions = this.collecting;
+      this.collecting = null;
+      this.sendDebug(name, debugProperties(properties), decisions);
+    }
+  }
+
+  // ── Live debugger ────────────────────────────────────────────────────────────
+
+  /** True when the dashboard picked the current user as a test device. */
+  private isDebugDevice(): boolean {
+    const users = this.configStore.debugUsers;
+    const projectId = this.configStore.projectId;
+    if (users.length === 0 || !projectId) return false;
+    return users.includes(debugKey(projectId, endUserIdOf(this.identityStore.snapshot())));
+  }
+
+  private handleDecision(d: Decision): void {
+    if (this.collecting) this.collecting.push(d);
+    // Made outside an event (a delayed survey's cap check at fire time): report on its own.
+    else if (this.isDebugDevice()) this.sendDebug(null, {}, [d]);
+  }
+
+  private sendDebug(event: string | null, properties: Record<string, unknown>, decisions: Decision[]): void {
+    const endUserId = endUserIdOf(this.identityStore.snapshot());
+    this.api.recordDebug(
+      { at: new Date().toISOString(), event, properties, decisions },
+      endUserId,
+      { ...this.deviceContext(), sdkVersion: SDK_VERSION },
+    );
+  }
+
+  /** Uploads the events counted since the last upload (no-op when there are none). */
+  flushEventCounts(): void {
+    if (this.eventCounter.size === 0) return;
+    this.api.recordEventCounts(this.eventCounter.drain(), { ...this.deviceContext(), sdkVersion: SDK_VERSION });
   }
 
   // ── Config accessors (for inline rendering) ──────────────────────────────────
@@ -172,7 +238,11 @@ export class MicroSurveysClient {
 
   private handlePresent(survey: Survey, trigger: Trigger, identity: Identity): void {
     // One survey on screen at a time — drop while one is active.
-    if (this.active && !this.active.closed) return;
+    if (this.active && !this.active.closed) {
+      this.handleDecision({ surveyId: survey.id, triggerId: trigger.id, reason: "another_survey_showing" });
+      return;
+    }
+    this.handleDecision({ surveyId: survey.id, triggerId: trigger.id, reason: "shown" });
     const p: Presentation = { survey, trigger, identity, shownAt: new Date(), closed: false };
     this.active = p;
     const active = this.toActiveSurvey(p);
