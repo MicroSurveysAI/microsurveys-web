@@ -21,7 +21,9 @@ export function windowExpired(window: number | null, startedAt: number | null, n
 }
 
 /** Advances `record` for one event. On satisfaction, bumps `satisfiedCount` and
- *  resets the sequence progress. Returns a new record (input is not mutated). */
+ *  resets the sequence progress. Returns a new record (input is not mutated).
+ *  `nowT` is the event's time in seconds: now for a live event, when it happened
+ *  for a replayed server event. */
 export function advance(
   trigger: Trigger,
   record: TriggerRecord,
@@ -43,6 +45,12 @@ export function advance(
   } else {
     // SEQUENCE
     const expected = Math.min(next.stepIndex, steps.length - 1);
+
+    // An event from before this sequence started (a late server event) can't be
+    // a later step of it, nor restart it: ignore it for this sequence.
+    if (expected !== 0 && next.startedAt !== null && nowT < next.startedAt) {
+      return { record: next, satisfied: false };
+    }
 
     if (matchesStep(expected)) {
       if (expected === 0) {

@@ -80,12 +80,16 @@ export class TriggerEngine {
     this.onDecision = opts.onDecision ?? (() => {});
   }
 
-  /** Feed an event into the engine. */
-  process(name: string, properties: Record<string, unknown> = {}): void {
+  /** Feed an event into the engine. `eventTime` (seconds) is when the event
+   *  happened, for a replayed server event: sequence progress and
+   *  `sequenceWindowSeconds` use it, while the survey window, cap and delay
+   *  always use now. Defaults to now. */
+  process(name: string, properties: Record<string, unknown> = {}, eventTime?: number): void {
     const identity = this.identityProvider();
     const endUserId = endUserIdOf(identity);
     const state = this.store.load(endUserId);
     const nowT = this.now();
+    const eventT = eventTime ?? nowT;
 
     for (const survey of this.surveysProvider()) {
       const triggers = survey.triggers;
@@ -101,7 +105,7 @@ export class TriggerEngine {
       }
 
       for (const trigger of triggers) {
-        const satisfied = this.advanceTrigger(trigger, state, name, properties, nowT);
+        const satisfied = this.advanceTrigger(trigger, state, name, properties, eventT);
         const skip = (reason: DecisionReason) => this.onDecision({ surveyId: survey.id, triggerId: trigger.id, reason });
         if (!satisfied) {
           if (names(trigger)) {
@@ -168,10 +172,10 @@ export class TriggerEngine {
     state: UserTriggerState,
     eventName: string,
     properties: Record<string, unknown>,
-    nowT: number,
+    eventT: number,
   ): boolean {
     const record = state.triggers[trigger.id] ?? newTriggerRecord();
-    const { record: updated, satisfied } = advance(trigger, record, eventName, properties, nowT);
+    const { record: updated, satisfied } = advance(trigger, record, eventName, properties, eventT);
     state.triggers[trigger.id] = updated;
     return satisfied;
   }

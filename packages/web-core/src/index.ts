@@ -15,6 +15,7 @@ export { fnv1a32, inSample, matches, audienceMatches, eventMatchesStep, stringif
 export { advance, windowExpired } from "./triggerSequencer";
 export { TriggerEngine, passesFrequency } from "./triggerEngine";
 export type { TriggerEngineOptions } from "./triggerEngine";
+export type { PendingEvent } from "./apiClient";
 export { ConfigStore, TriggerStateStore } from "./persistence";
 export { IdentityStore } from "./identity";
 export { EventCounter } from "./eventCounter";

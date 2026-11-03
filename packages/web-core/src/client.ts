@@ -9,6 +9,7 @@
 //
 
 import { ApiClient } from "./apiClient";
+import type { PendingEvent } from "./apiClient";
 import { ConfigStore, TriggerStateStore } from "./persistence";
 import { IdentityStore } from "./identity";
 import { TriggerEngine } from "./triggerEngine";
@@ -25,6 +26,15 @@ const DEFAULT_BASE_URL = "https://console.microsurveys.ai";
 const DEFAULT_CONFIG_TTL_MS = 30 * 60 * 1000;
 /** How often counted events are uploaded while event signals are on. */
 const EVENT_COUNTS_INTERVAL_MS = 60 * 1000;
+/** Extra mailbox checks after each start or return to the tab. Amplitude
+ *  streams within about 60 s, so these catch an event from just before. */
+const PENDING_FOLLOW_UPS_MS = [30 * 1000, 90 * 1000];
+/** Mailbox check interval while the tab is visible. */
+const PENDING_INTERVAL_MS = 5 * 60 * 1000;
+/** Faster interval while a sequence waits on a server event as its next step. */
+const PENDING_WAITING_INTERVAL_MS = 60 * 1000;
+/** How long after a sequence started it still counts as waiting (seconds). */
+const PENDING_WAITING_MAX_S = 3 * 60 * 60;
 
 export interface CreateClientOptions {
   apiKey: string;
@@ -68,6 +78,10 @@ export class MicroSurveysClient {
   private readonly engine: TriggerEngine;
   private readonly eventCounter = new EventCounter();
   private eventCountsTimer: ReturnType<typeof setInterval> | null = null;
+  /** Server-event mailbox timers, cleared while the tab is hidden. */
+  private pendingTimeouts: ReturnType<typeof setTimeout>[] = [];
+  private pendingIntervals: ReturnType<typeof setInterval>[] = [];
+  private pendingInFlight = false;
   /** Decisions collected while one event is processed, for the live debugger. */
   private collecting: Decision[] | null = null;
   private readonly configTTLms: number;
@@ -105,14 +119,22 @@ export class MicroSurveysClient {
     if (this.started) return;
     this.started = true;
     void this.api.flush();
-    void this.refreshConfig();
+    void this.refreshConfig().then(() => {
+      // The refresh may already have started the checks (a config that turned them on).
+      if (this.started && this.pendingTimeouts.length === 0 && this.pendingIntervals.length === 0) {
+        this.startPendingChecks();
+      }
+    });
     if (typeof document !== "undefined") {
       this.foregroundHandler = () => {
         if (document.visibilityState === "visible") {
           if (this.refreshOnForeground) this.refreshConfigIfStale();
+          // Not tied to the config TTL: server events can arrive at any time.
+          this.startPendingChecks();
         } else {
           // The tab may not come back: send what was counted while it was open.
           this.flushEventCounts();
+          this.stopPendingChecks();
         }
       };
       document.addEventListener("visibilitychange", this.foregroundHandler);
@@ -123,6 +145,7 @@ export class MicroSurveysClient {
   /** Tear down listeners + pending timers. */
   stop(): void {
     this.engine.stop();
+    this.stopPendingChecks();
     this.flushEventCounts();
     if (this.eventCountsTimer) clearInterval(this.eventCountsTimer);
     this.eventCountsTimer = null;
@@ -139,6 +162,7 @@ export class MicroSurveysClient {
       const result = await this.api.fetchConfig(this.configStore.etag);
       if (result.kind === "config") {
         this.configStore.save(result.rawText, result.etag);
+        this.syncPendingChecks();
         this.configListeners.forEach((l) => l());
       }
     } catch {
@@ -156,7 +180,10 @@ export class MicroSurveysClient {
   // ── Identity + events ────────────────────────────────────────────────────────
 
   identify(userId: string | null | undefined, properties?: Record<string, unknown>): void {
+    const previous = this.identityStore.snapshot().hostUserId;
     this.identityStore.setUser(userId, properties);
+    // The user id often arrives after start: check this user's mailbox now.
+    if (this.started && userId && userId !== previous) void this.checkPending();
   }
 
   track(name: string, properties: Record<string, unknown> = {}): void {
@@ -164,18 +191,114 @@ export class MicroSurveysClient {
       this.eventCounter.record(name, properties);
       if (this.eventCounter.size >= MAX_NAMES) this.flushEventCounts();
     }
+    this.processEvent(name, properties);
+  }
+
+  /** Runs one event through the engine, reporting to the live debugger on a test
+   *  device. `occurredAt` (ms epoch) is set for a replayed server event. */
+  private processEvent(name: string, properties: Record<string, unknown>, occurredAt?: number): void {
+    const eventTime = occurredAt === undefined ? undefined : occurredAt / 1000;
     if (!this.isDebugDevice()) {
-      this.engine.process(name, properties);
+      this.engine.process(name, properties, eventTime);
       return;
     }
     this.collecting = [];
     try {
-      this.engine.process(name, properties);
+      this.engine.process(name, properties, eventTime);
     } finally {
       const decisions = this.collecting;
       this.collecting = null;
-      this.sendDebug(name, debugProperties(properties), decisions);
+      this.sendDebug(name, debugProperties(properties), decisions, occurredAt);
     }
+  }
+
+  // ── Server events (API-CONTRACT §6) ──────────────────────────────────────────
+
+  /** (Re)starts the mailbox checks for a start or a return to the tab: one now,
+   *  follow-ups at 30 s and 90 s, then every 5 minutes, and every minute while
+   *  a sequence waits on a server event. Only while config has `pendingEvents`
+   *  and the tab is visible. */
+  private startPendingChecks(): void {
+    this.stopPendingChecks();
+    if (!this.started || !this.configStore.pendingEvents || !tabVisible()) return;
+    void this.checkPending();
+    for (const ms of PENDING_FOLLOW_UPS_MS) {
+      this.pendingTimeouts.push(setTimeout(() => void this.checkPending(), ms));
+    }
+    this.pendingIntervals.push(setInterval(() => void this.checkPending(), PENDING_INTERVAL_MS));
+    this.pendingIntervals.push(
+      setInterval(() => {
+        if (this.isWaitingOnServerEvent()) void this.checkPending();
+      }, PENDING_WAITING_INTERVAL_MS),
+    );
+  }
+
+  private stopPendingChecks(): void {
+    for (const t of this.pendingTimeouts) clearTimeout(t);
+    for (const t of this.pendingIntervals) clearInterval(t);
+    this.pendingTimeouts = [];
+    this.pendingIntervals = [];
+  }
+
+  /** After a config refresh: stop the checks if the project turned them off, or
+   *  start them if it turned them on. */
+  private syncPendingChecks(): void {
+    const running = this.pendingTimeouts.length > 0 || this.pendingIntervals.length > 0;
+    if (!this.configStore.pendingEvents) this.stopPendingChecks();
+    else if (this.started && !running) this.startPendingChecks();
+  }
+
+  /** True when a SEQUENCE for the current user has started and its next step is
+   *  an event that arrives by stream, within 3 hours of the sequence starting. */
+  private isWaitingOnServerEvent(): boolean {
+    const serverEvents = this.configStore.serverEvents;
+    if (serverEvents.length === 0) return false;
+    const state = this.triggerStateStore.load(endUserIdOf(this.identityStore.snapshot()));
+    const nowS = Date.now() / 1000;
+    for (const survey of this.configStore.surveys) {
+      for (const trigger of survey.triggers ?? []) {
+        if (trigger.type !== "SEQUENCE") continue;
+        const record = state.triggers[trigger.id];
+        if (!record || record.stepIndex <= 0 || record.startedAt === null) continue;
+        if (nowS - record.startedAt > PENDING_WAITING_MAX_S) continue;
+        const steps = [...trigger.steps].sort((a, b) => a.order - b.order);
+        const next = steps[Math.min(record.stepIndex, steps.length - 1)];
+        if (next && serverEvents.includes(next.event)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Takes this user's waiting server events and replays them. One request at a
+   *  time; a full page is followed by one more call. Failures are silent: the
+   *  next scheduled check retries. Web sends only the `identify()` user id (the
+   *  anonymous id is not an Amplitude device id), so nothing runs before it. */
+  private async checkPending(): Promise<void> {
+    if (this.pendingInFlight || !this.configStore.pendingEvents) return;
+    const userId = this.identityStore.snapshot().hostUserId;
+    if (!userId) return;
+    this.pendingInFlight = true;
+    try {
+      for (let call = 0; call < 2; call++) {
+        const { events, full } = await this.api.fetchPending({ userId });
+        // Stopped, or another user signed in while this was in flight: don't
+        // replay one user's events into another's trigger state.
+        if (!this.started || this.identityStore.snapshot().hostUserId !== userId) return;
+        this.replayPending(events);
+        if (!full) break;
+      }
+    } catch {
+      // Offline or server error: the next check retries.
+    } finally {
+      this.pendingInFlight = false;
+    }
+  }
+
+  /** Feeds server events through the `track()` path in the order they happened,
+   *  at their own time, without counting them in event signals. */
+  private replayPending(events: PendingEvent[]): void {
+    const timed = events.map((e) => ({ e, at: Date.parse(e.occurredAt) })).sort((a, b) => a.at - b.at);
+    for (const { e, at } of timed) this.processEvent(e.name, e.properties, at);
   }
 
   // ── Live debugger ────────────────────────────────────────────────────────────
@@ -194,10 +317,15 @@ export class MicroSurveysClient {
     else if (this.isDebugDevice()) this.sendDebug(null, {}, [d]);
   }
 
-  private sendDebug(event: string | null, properties: Record<string, unknown>, decisions: Decision[]): void {
+  private sendDebug(
+    event: string | null,
+    properties: Record<string, unknown>,
+    decisions: Decision[],
+    at: number = Date.now(),
+  ): void {
     const endUserId = endUserIdOf(this.identityStore.snapshot());
     this.api.recordDebug(
-      { at: new Date().toISOString(), event, properties, decisions },
+      { at: new Date(at).toISOString(), event, properties, decisions },
       endUserId,
       { ...this.deviceContext(), sdkVersion: SDK_VERSION },
     );
@@ -308,6 +436,11 @@ export class MicroSurveysClient {
     const locale = typeof navigator !== "undefined" ? navigator.language : undefined;
     return { platform: this.platform, appVersion: this.appVersion, locale: locale || undefined };
   }
+}
+
+/** True unless the page is hidden (or there's no document, e.g. tests). */
+function tabVisible(): boolean {
+  return typeof document === "undefined" || document.visibilityState !== "hidden";
 }
 
 /** Creates and returns a `MicroSurveysClient`. Call `start()` to begin. */

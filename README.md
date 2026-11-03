@@ -54,6 +54,11 @@ Your API key is the browser-embeddable project key from the dashboard (same key 
 ships). Surveys, triggers, targeting, and theme are configured in the dashboard and evaluated
 **on-device** — no server round-trip to decide what to show.
 
+Surveys can also trigger on events your backend sends to Amplitude (set up under server events in
+the dashboard). The SDK picks them up for the signed-in user when the page opens, when the tab
+comes back into view, and every few minutes while it's open, so call `identify(userId)` with the
+same user id your backend sends to Amplitude.
+
 ## Development
 
 ```bash

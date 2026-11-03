@@ -1,7 +1,7 @@
 //
 // apiClient.ts
 //
-// `fetch`-based client for the three SDK endpoints plus outbox flush. Every
+// `fetch`-based client for the SDK endpoints plus outbox flush. Every
 // impression/response carries a UUID `clientId` so the server upserts and
 // retries never duplicate (API-CONTRACT §Idempotency). Port of iOS `APIClient`.
 //
@@ -18,6 +18,19 @@ const API_VERSION = "2026-06-30";
 export type ConfigFetchResult =
   | { kind: "notModified" }
   | { kind: "config"; rawText: string; config: SDKConfig | null; etag: string | null };
+
+/** A server event waiting in the mailbox (API-CONTRACT §6). */
+export interface PendingEvent {
+  id: string;
+  name: string;
+  /** Only the keys triggers match on. */
+  properties: Record<string, unknown>;
+  /** When it happened (ISO 8601), not when it arrived. */
+  occurredAt: string;
+}
+
+/** Most events the mailbox returns per call; a full page means call again. */
+export const PENDING_PAGE_SIZE = 50;
 
 export class ApiClient {
   private readonly apiKey: string;
@@ -48,6 +61,47 @@ export class ApiClient {
 
     const rawText = await res.text();
     return { kind: "config", rawText, config: parseConfig(rawText), etag: res.headers.get("ETag") };
+  }
+
+  // ── Server events ───────────────────────────────────────────────────────────
+
+  /** `POST /api/sdk/pending`: takes this user's waiting server events, oldest
+   *  first. Each is returned once and then deleted, so this is never queued in
+   *  the outbox. `full` means a whole page came back and more may be waiting.
+   *  Throws on network/HTTP errors; drops malformed entries. */
+  async fetchPending(ids: {
+    userId?: string | null;
+    deviceId?: string | null;
+  }): Promise<{ events: PendingEvent[]; full: boolean }> {
+    const body: Record<string, string> = {};
+    if (ids.userId) body.userId = ids.userId;
+    if (ids.deviceId) body.deviceId = ids.deviceId;
+    const res = await fetch(this.endpoint("/api/sdk/pending"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "MS-Api-Version": API_VERSION,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`pending fetch failed: ${res.status}`);
+    const root = (await res.json()) as { events?: unknown };
+    if (!Array.isArray(root?.events)) return { events: [], full: false };
+    const events: PendingEvent[] = [];
+    for (const raw of root.events as Record<string, unknown>[]) {
+      if (!raw || typeof raw !== "object") continue;
+      const { id, name, properties, occurredAt } = raw;
+      if (typeof name !== "string" || !name || typeof occurredAt !== "string") continue;
+      if (Number.isNaN(Date.parse(occurredAt))) continue;
+      events.push({
+        id: typeof id === "string" ? id : "",
+        name,
+        properties: properties && typeof properties === "object" && !Array.isArray(properties) ? (properties as Record<string, unknown>) : {},
+        occurredAt,
+      });
+    }
+    return { events, full: root.events.length >= PENDING_PAGE_SIZE };
   }
 
   // ── Impressions / responses ─────────────────────────────────────────────────

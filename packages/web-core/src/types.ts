@@ -107,6 +107,13 @@ export interface SDKConfig {
   /** Hashes of the project's test devices for the live debugger (see debug.ts).
    *  Empty when none are set, or on older servers. */
   debugUsers: string[];
+  /** The project has server events set up: check the mailbox
+   *  (`POST /api/sdk/pending`) for events sent by the app's backend. Absent on
+   *  older servers, which means off. */
+  pendingEvents: boolean;
+  /** Trigger event names that have arrived by stream, sorted. A sequence whose
+   *  next step is one of these checks the mailbox more often. */
+  serverEvents: string[];
 }
 
 /** Brand-level survey appearance (API-CONTRACT §Theme). All keys optional. */
@@ -369,5 +376,7 @@ export function parseConfig(rawText: string): SDKConfig | null {
     surveys,
     eventSignals: root.eventSignals === true,
     debugUsers: Array.isArray(root.debugUsers) ? root.debugUsers.filter((h): h is string => typeof h === "string") : [],
+    pendingEvents: root.pendingEvents === true,
+    serverEvents: Array.isArray(root.serverEvents) ? root.serverEvents.filter((e): e is string => typeof e === "string") : [],
   };
 }
