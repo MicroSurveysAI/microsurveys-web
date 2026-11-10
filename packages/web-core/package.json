@@ -1,6 +1,6 @@
 {
   "name": "@microsurveysai/web-core",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Framework-agnostic browser runtime for MicroSurveys — on-device trigger evaluation, deterministic sampling, config cache, and offline ingest.",
   "license": "MIT",
   "type": "module",
@@ -26,13 +26,17 @@
     "url": "git+https://github.com/MicroSurveysAI/microsurveys-web.git",
     "directory": "packages/web-core"
   },
-  "homepage": "https://github.com/MicroSurveysAI/microsurveys-web/tree/main/packages/web-core",
+  "bugs": "https://github.com/MicroSurveysAI/microsurveys-web/issues",
+  "homepage": "https://docs.microsurveys.ai/web-sdk/",
   "keywords": [
     "microsurveys",
+    "microsurvey",
     "surveys",
-    "in-app",
+    "in-app-survey",
     "nps",
     "csat",
+    "ces",
+    "user-feedback",
     "feedback"
   ],
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "@microsurveysai/react",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "React SDK for MicroSurveys — provider, hooks, and renderers for auto-triggered and inline in-app surveys.",
   "license": "MIT",
   "type": "module",
@@ -26,14 +26,18 @@
     "url": "git+https://github.com/MicroSurveysAI/microsurveys-web.git",
     "directory": "packages/react"
   },
-  "homepage": "https://github.com/MicroSurveysAI/microsurveys-web/tree/main/packages/react",
+  "bugs": "https://github.com/MicroSurveysAI/microsurveys-web/issues",
+  "homepage": "https://docs.microsurveys.ai/web-sdk/",
   "keywords": [
     "microsurveys",
+    "microsurvey",
     "surveys",
+    "in-app-survey",
     "react",
-    "in-app",
     "nps",
     "csat",
+    "ces",
+    "user-feedback",
     "feedback"
   ],
   "scripts": {
