@@ -374,6 +374,8 @@ function normalizeSurvey(raw: Record<string, unknown>): Survey | null {
     triggers,
     dismissible: typeof raw.dismissible === "boolean" ? raw.dismissible : null,
     presentation: strOrUndef(raw.presentation) ?? null,
+    webPlacement: strOrUndef(raw.webPlacement) ?? null,
+    webLauncher: typeof raw.webLauncher === "boolean" ? raw.webLauncher : null,
     successMessage: strOrUndef(raw.successMessage) ?? null,
     platforms: Array.isArray(raw.platforms) ? raw.platforms.filter((p): p is string => typeof p === "string") : null,
   };
