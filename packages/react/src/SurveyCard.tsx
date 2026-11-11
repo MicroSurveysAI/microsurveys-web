@@ -15,11 +15,15 @@ export interface SurveyCardProps {
   survey: Survey;
   /** Called exactly once when the card closes (completed, partial, or dismissed). */
   onClose: (result: SurveyResult) => void;
+  /** Whether the card is a modal dialog over a dimmed page (default) or floats beside the page. */
+  modal?: boolean;
+  /** When set, the card shows a minimize button that calls it (back to the launcher). */
+  onMinimize?: () => void;
 }
 
 const SUCCESS_MS = 1400;
 
-export function SurveyCard({ survey, onClose }: SurveyCardProps) {
+export function SurveyCard({ survey, onClose, modal = true, onMinimize }: SurveyCardProps) {
   const questions = useMemo(() => [...survey.questions].sort((a, b) => a.order - b.order), [survey]);
   const dismissible = survey.dismissible !== false;
 
@@ -77,7 +81,25 @@ export function SurveyCard({ survey, onClose }: SurveyCardProps) {
   }
 
   return (
-    <div className="ms-card" role="dialog" aria-modal="true" aria-label={survey.name}>
+    <div
+      className={onMinimize ? "ms-card ms-has-min" : "ms-card"}
+      role="dialog"
+      aria-modal={modal ? "true" : "false"}
+      aria-label={survey.name}
+      tabIndex={-1}
+    >
+      {onMinimize && (
+        <button
+          type="button"
+          className={dismissible ? "ms-close ms-minimize" : "ms-close"}
+          aria-label="Minimize"
+          onClick={onMinimize}
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
       {dismissible && (
         <button type="button" className="ms-close" aria-label="Close" onClick={dismiss}>
           ✕

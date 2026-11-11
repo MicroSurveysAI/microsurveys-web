@@ -24,8 +24,9 @@ function Checkout() {
 ```
 
 Eligibility (triggers, audience, sampling, frequency caps) is configured in the dashboard and
-evaluated **on-device**. An eligible survey presents as a bottom sheet or centered dialog per its
-configuration.
+evaluated **on-device**. An eligible survey presents where its configuration says: a card floating in a
+corner of the page, a bottom sheet, or a centered dialog, optionally starting minimized as a small
+button visitors click to open.
 
 ## Inline surveys
 

@@ -11,7 +11,7 @@
 //
 
 import type { CSSProperties } from "react";
-import type { ProjectTheme } from "@microsurveysai/web-core";
+import type { ProjectTheme, Survey, WebPlacement } from "@microsurveysai/web-core";
 
 /** iOS `SurveyTheme.default` light-mode palette + metrics. */
 const DEFAULTS = {
@@ -126,13 +126,34 @@ export function resolveTheme(theme: ProjectTheme | null | undefined): ResolvedTh
   return { vars, googleFont };
 }
 
-/** Where the card sits — per-survey `presentation`, else the theme `position`. */
-export function resolvePosition(presentation: string | null | undefined, theme: ProjectTheme | null | undefined): "sheet" | "dialog" {
-  const p = presentation ?? null;
-  if (p === "sheet") return "sheet";
-  if (p === "dialog") return "dialog";
-  // Inherit from the project theme position ("center" ⇒ dialog, else sheet).
-  return theme?.position === "center" ? "dialog" : "sheet";
+const PLACEMENTS: readonly WebPlacement[] = ["bottom-right", "bottom-left", "top-right", "top-left", "bottom", "center"];
+
+function asPlacement(v: unknown): WebPlacement | null {
+  return typeof v === "string" && (PLACEMENTS as readonly string[]).includes(v) ? (v as WebPlacement) : null;
+}
+
+/**
+ * Where the card sits: the survey's `webPlacement`, else the project theme's, else what the
+ * survey's `presentation` gives it (a dialog is centered; a sheet, or nothing, docks to the bottom
+ * the way the mobile SDKs show it, with the theme `position` as the last word).
+ */
+export function resolvePlacement(survey: Pick<Survey, "webPlacement" | "presentation">, theme: ProjectTheme | null | undefined): WebPlacement {
+  const placed = asPlacement(survey.webPlacement) ?? asPlacement(theme?.webPlacement);
+  if (placed) return placed;
+  if (survey.presentation === "dialog") return "center";
+  if (survey.presentation === "sheet") return "bottom";
+  return theme?.position === "center" ? "center" : "bottom";
+}
+
+/** Corners float over the page; bottom and center are modal (dimmed page, focus held). */
+export function isModalPlacement(p: WebPlacement): boolean {
+  return p === "bottom" || p === "center";
+}
+
+/** Whether the survey starts minimized as a launcher: the survey's choice, else the theme's. */
+export function resolveLauncher(survey: Pick<Survey, "webLauncher">, theme: ProjectTheme | null | undefined): boolean {
+  if (typeof survey.webLauncher === "boolean") return survey.webLauncher;
+  return theme?.webLauncher === true;
 }
 
 /** Lazily inject a Google Fonts stylesheet for a curated family (once). */

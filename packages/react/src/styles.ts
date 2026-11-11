@@ -10,6 +10,7 @@ const STYLE_ID = "microsurveys-styles";
 
 const CSS = `
 .ms-root, .ms-root * { box-sizing: border-box; }
+.ms-root [hidden] { display: none !important; }
 .ms-root {
   font-family: var(--ms-font);
   color: var(--ms-text);
@@ -36,12 +37,84 @@ const CSS = `
   padding: calc(var(--ms-spacing) * 1.5);
   animation: ms-rise 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.ms-card:focus { outline: none; }
+
+/* Floating card: pinned to a corner, no scrim, the page stays usable. */
+.ms-float {
+  position: fixed; z-index: 2147483000;
+  width: min(380px, calc(100vw - 40px));
+}
+.ms-float .ms-card {
+  max-width: none; max-height: calc(100vh - 40px); overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(9, 9, 11, 0.22);
+}
+.ms-float.ms-at-bottom-right { right: 20px; bottom: 20px; }
+.ms-float.ms-at-bottom-left { left: 20px; bottom: 20px; }
+.ms-float.ms-at-top-right { right: 20px; top: 20px; }
+.ms-float.ms-at-top-left { left: 20px; top: 20px; }
+.ms-float.ms-at-top-right .ms-card, .ms-float.ms-at-top-left .ms-card { animation-name: ms-drop; }
+
+/* Launcher: the minimized survey, a pill in the accent color. */
+.ms-launcher-wrap {
+  position: fixed; z-index: 2147483000;
+  display: flex; align-items: center; gap: 8px;
+  animation: ms-rise 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ms-launcher-wrap.ms-at-bottom-right { right: 20px; bottom: 20px; }
+.ms-launcher-wrap.ms-at-bottom-left { left: 20px; bottom: 20px; flex-direction: row-reverse; }
+.ms-launcher-wrap.ms-at-top-right { right: 20px; top: 20px; animation-name: ms-drop; }
+.ms-launcher-wrap.ms-at-top-left { left: 20px; top: 20px; flex-direction: row-reverse; animation-name: ms-drop; }
+.ms-launcher-wrap.ms-at-bottom {
+  left: 0; right: 0; bottom: 20px; justify-content: center; pointer-events: none;
+}
+.ms-launcher-wrap.ms-at-bottom > * { pointer-events: auto; }
+.ms-launcher {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 18px; max-width: min(320px, calc(100vw - 96px));
+  border: none; border-radius: 22px; cursor: pointer;
+  background: var(--ms-accent); color: var(--ms-accent-text);
+  font: inherit; font-size: calc(14px * var(--ms-text-scale)); font-weight: 600;
+  box-shadow: 0 8px 24px rgba(9, 9, 11, 0.22);
+  transition: transform 120ms, box-shadow 120ms;
+}
+.ms-launcher:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(9, 9, 11, 0.26); }
+.ms-launcher:focus-visible, .ms-launcher-close:focus-visible {
+  outline: 2px solid var(--ms-accent); outline-offset: 2px;
+}
+.ms-launcher-icon { flex: none; }
+.ms-launcher-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-launcher-close {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--ms-border); background: var(--ms-surface); color: var(--ms-secondary-text);
+  font-size: 12px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(9, 9, 11, 0.12);
+}
+.ms-launcher-close:hover { color: var(--ms-text); }
+
+/* Phones: a corner card spans the width, still on its edge. */
+@media (max-width: 520px) {
+  .ms-float { width: auto; }
+  .ms-float.ms-at-bottom-right, .ms-float.ms-at-bottom-left { left: 12px; right: 12px; bottom: 12px; }
+  .ms-float.ms-at-top-right, .ms-float.ms-at-top-left { left: 12px; right: 12px; top: 12px; }
+  .ms-float .ms-card { max-height: calc(100vh - 24px); }
+  .ms-launcher-wrap.ms-at-bottom-right, .ms-launcher-wrap.ms-at-bottom-left { bottom: 12px; }
+  .ms-launcher-wrap.ms-at-bottom-right, .ms-launcher-wrap.ms-at-top-right { right: 12px; }
+  .ms-launcher-wrap.ms-at-bottom-left, .ms-launcher-wrap.ms-at-top-left { left: 12px; }
+  .ms-launcher-wrap.ms-at-top-right, .ms-launcher-wrap.ms-at-top-left { top: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-scrim, .ms-card, .ms-launcher-wrap { animation: none; }
+  .ms-launcher { transition: none; }
+}
+
 .ms-inline .ms-card {
   box-shadow: none; animation: none; max-width: none;
 }
 .ms-inline { display: block; }
 
 @keyframes ms-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ms-drop { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ms-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ── Header ──────────────────────────────────────────────── */
@@ -62,6 +135,8 @@ const CSS = `
   display: inline-flex; align-items: center; justify-content: center;
 }
 .ms-close:hover { background: var(--ms-track); color: var(--ms-text); }
+.ms-close.ms-minimize { right: 46px; }
+.ms-has-min .ms-prompt { padding-right: 60px; }
 
 .ms-progress {
   font-size: calc(12px * var(--ms-text-scale));

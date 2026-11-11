@@ -40,6 +40,7 @@ export type {
   Survey,
   SDKConfig,
   ProjectTheme,
+  WebPlacement,
   DeviceContext,
   Identity,
   AnswerValue,

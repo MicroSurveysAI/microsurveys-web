@@ -89,6 +89,11 @@ export interface Survey {
   dismissible?: boolean | null;
   /** `"sheet"` | `"dialog"` | null (inherit the project theme's position). */
   presentation?: string | null;
+  /** Web only: where the card sits (see `WebPlacement`). null = the theme's `webPlacement`,
+   *  else derived from `presentation`. */
+  webPlacement?: string | null;
+  /** Web only: start minimized as a launcher pill. null = the theme's `webLauncher`. */
+  webLauncher?: boolean | null;
   successMessage?: string | null;
   /** Platform targeting for auto-presentation. Empty/absent = all platforms.
    *  The engine skips a survey whose list is non-empty and excludes the client's
@@ -116,6 +121,10 @@ export interface SDKConfig {
   serverEvents: string[];
 }
 
+/** Where the web SDK puts a survey. Corners float over the page without dimming
+ *  it; `"bottom"` and `"center"` are the modal sheet and dialog. */
+export type WebPlacement = "bottom-right" | "bottom-left" | "top-right" | "top-left" | "bottom" | "center";
+
 /** Brand-level survey appearance (API-CONTRACT §Theme). All keys optional. */
 export interface ProjectTheme {
   accent?: string;
@@ -133,6 +142,10 @@ export interface ProjectTheme {
   textScale?: number;
   position?: string; // "bottom" | "center"
   alignment?: string; // "leading" | "center"
+  /** Web only: the project's default placement (see `WebPlacement`). */
+  webPlacement?: string;
+  /** Web only: start surveys minimized as a launcher pill. */
+  webLauncher?: boolean;
   font?: string;
   titleSize?: number;
   titleWeight?: string;
