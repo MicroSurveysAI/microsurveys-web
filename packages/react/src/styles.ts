@@ -38,6 +38,8 @@ const CSS = `
   animation: ms-rise 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ms-card:focus { outline: none; }
+/* Once the visitor has opened or minimized, transitions come from motion.ts, not these entrances. */
+.ms-moved .ms-scrim, .ms-moved .ms-card, .ms-moved .ms-launcher-wrap { animation: none; }
 
 /* Floating card: pinned to a corner, no scrim, the page stays usable. */
 .ms-float {
