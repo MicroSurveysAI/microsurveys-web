@@ -147,9 +147,20 @@ const CSS = `
 }
 
 /* ── Scale (NPS / CES) ───────────────────────────────────── */
-.ms-scale { display: flex; flex-wrap: wrap; gap: 8px; }
+.ms-scale { gap: 8px; }
+/* Up to 7 points: one row of equal chips. Never taller than wide, so a narrow card gets circles, not ovals. */
+.ms-scale-row {
+  display: grid; grid-template-columns: repeat(var(--ms-scale-n, 7), minmax(0, 1fr));
+  container-type: inline-size;
+}
+.ms-scale-row .ms-chip {
+  min-width: 0; padding: 0;
+  height: min(var(--ms-control-height), calc((100cqi - 8px * (var(--ms-scale-n, 7) - 1)) / var(--ms-scale-n, 7)));
+}
+/* Longer scales (NPS): fixed-size chips wrapping into centered rows. */
+.ms-scale-wrap { display: flex; flex-wrap: wrap; justify-content: center; }
+.ms-scale-wrap .ms-chip { flex: 0 0 auto; width: var(--ms-control-height); padding: 0; }
 .ms-chip {
-  flex: 1 1 auto; min-width: var(--ms-control-height);
   height: var(--ms-control-height);
   border: 1px solid var(--ms-border); background: var(--ms-surface);
   color: var(--ms-text); border-radius: var(--ms-control-radius);

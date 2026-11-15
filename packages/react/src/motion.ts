@@ -27,6 +27,7 @@ const SPRING = (() => {
   return "cubic-bezier(0.3, 1.3, 0.4, 1)";
 })();
 const EASE_IN = "cubic-bezier(0.4, 0, 1, 1)";
+const EASE_OUT = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 
 /** Where the card grows from: the corner the launcher sits in. Modal placements dock the launcher bottom-center. */
 export function unfurlOrigin(placement: WebPlacement): string {
@@ -47,9 +48,9 @@ function reducedMotion(): boolean {
   }
 }
 
-/** Stops any running transition on these elements. Their pending promises reject. */
+/** Stops any running transition on these elements and their contents. Their pending promises reject. */
 export function stopMotion(...els: (Element | null | undefined)[]): void {
-  for (const el of els) el?.getAnimations?.().forEach((a) => a.cancel());
+  for (const el of els) el?.getAnimations?.({ subtree: true }).forEach((a) => a.cancel());
 }
 
 /**
@@ -74,18 +75,48 @@ function play(
   return anim.finished.then(() => undefined);
 }
 
-/** The card opens out of the launcher's corner. */
+/**
+ * The rows of the card that settle in one after another, as [element, step]: the corner buttons
+ * first (together, like a header row), then progress, prompt, each row of the question, the footer.
+ */
+function cardParts(card: Element): [Element, number][] {
+  const corner: Element[] = [];
+  const rows: Element[] = [];
+  for (const child of Array.from(card.children)) {
+    if (child.classList.contains("ms-close")) corner.push(child);
+    // A question's wrapper (e.g. scale + end labels) staggers row by row.
+    else if (child.tagName === "DIV" && !child.className && child.children.length > 1) rows.push(...Array.from(child.children));
+    else rows.push(child);
+  }
+  const first = corner.length ? 1 : 0;
+  return [...corner.map((el): [Element, number] => [el, 0]), ...rows.map((el, i): [Element, number] => [el, first + i])];
+}
+
+/**
+ * The card opens out of the launcher's corner with a soft spring, then its contents settle in one
+ * after another (each rises 6px and fades in, 40ms apart).
+ */
 export function cardIn(card: Element | null | undefined, origin: string): Promise<void> {
   if (reducedMotion()) return play(card, [{ opacity: 0 }, { opacity: 1 }], { duration: 150 });
-  return play(
-    card,
-    [
-      { opacity: 0, transform: "scale(0.35)" },
-      { opacity: 1, transform: "scale(0.7)", offset: 0.25 },
-      { opacity: 1, transform: "scale(1)" },
-    ],
-    { duration: 460, easing: SPRING, origin },
-  );
+  const parts = card ? cardParts(card) : [];
+  return Promise.all([
+    play(
+      card,
+      [
+        { opacity: 0, transform: "scale(0.35)" },
+        { opacity: 1, transform: "scale(0.7)", offset: 0.25 },
+        { opacity: 1, transform: "scale(1)" },
+      ],
+      { duration: 460, easing: SPRING, origin },
+    ),
+    ...parts.map(([el, i]) =>
+      play(el, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], {
+        duration: 260,
+        delay: 120 + i * 40,
+        easing: EASE_OUT,
+      }),
+    ),
+  ]).then(() => undefined);
 }
 
 /** The card folds back into the launcher's corner. Holds its last frame; hide the card when it resolves. */

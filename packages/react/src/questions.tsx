@@ -8,6 +8,7 @@
 //
 
 import type { AnswerValue, Question } from "@microsurveysai/web-core";
+import type { CSSProperties } from "react";
 
 export interface QuestionInputProps {
   question: Question;
@@ -52,9 +53,16 @@ function strValue(v: AnswerValue | undefined): string | undefined {
 function ScaleInput({ min, max, minLabel, maxLabel, value, onPick }: { min: number; max: number; minLabel?: string; maxLabel?: string; value: number | undefined; onPick: (n: number) => void }) {
   const points: number[] = [];
   for (let i = min; i <= max; i++) points.push(i);
+  // Short scales (CES 1–7) sit on one row of equal chips, like the mobile SDKs; longer ones (NPS 0–10)
+  // wrap into centered rows of fixed-size chips.
+  const oneRow = points.length <= 7;
   return (
     <div>
-      <div className="ms-scale" role="group">
+      <div
+        className={oneRow ? "ms-scale ms-scale-row" : "ms-scale ms-scale-wrap"}
+        role="group"
+        style={oneRow ? ({ "--ms-scale-n": points.length } as CSSProperties) : undefined}
+      >
         {points.map((n) => (
           <button key={n} type="button" className="ms-chip" aria-pressed={value === n} onClick={() => onPick(n)}>
             {n}
