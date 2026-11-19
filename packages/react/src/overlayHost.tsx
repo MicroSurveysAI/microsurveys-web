@@ -64,6 +64,12 @@ export function OverlayHost({ client }: { client: MicroSurveysClient | null }) {
     });
   }, [client]);
 
+  // On screen (as the card, or as its launcher when it starts minimized): send
+  // the impression now rather than at close.
+  useEffect(() => {
+    active?.shown();
+  }, [active]);
+
   const placement = active && client ? resolvePlacement(active.survey, client.getTheme()) : "bottom";
   const modal = isModalPlacement(placement);
   const origin = unfurlOrigin(placement);
