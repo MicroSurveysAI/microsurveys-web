@@ -25,6 +25,7 @@ export { debugKey } from "./debug";
 export type { DebugEntry } from "./debug";
 export type { Decision, DecisionReason } from "./triggerEngine";
 export { parseConfig, endUserIdOf, newTriggerRecord, newUserTriggerState } from "./types";
+export { thanksDurationMs, thanksMessage, DEFAULT_SUCCESS_MESSAGE } from "./thanks";
 
 export type {
   Json,
@@ -38,6 +39,7 @@ export type {
   TriggerStep,
   Trigger,
   Survey,
+  SuccessPace,
   SDKConfig,
   ProjectTheme,
   WebPlacement,

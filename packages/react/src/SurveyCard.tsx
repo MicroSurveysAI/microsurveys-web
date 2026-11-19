@@ -7,7 +7,8 @@
 // in the themed `.ms-root` (+ scrim for overlays, plain for inline).
 //
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { thanksDurationMs, thanksMessage } from "@microsurveysai/web-core";
 import type { AnswerValue, Survey, SurveyAnswer, SurveyResult } from "@microsurveysai/web-core";
 import { QuestionInput, isAnswered } from "./questions";
 
@@ -21,8 +22,6 @@ export interface SurveyCardProps {
   onMinimize?: () => void;
 }
 
-const SUCCESS_MS = 1400;
-
 export function SurveyCard({ survey, onClose, modal = true, onMinimize }: SurveyCardProps) {
   const questions = useMemo(() => [...survey.questions].sort((a, b) => a.order - b.order), [survey]);
   const dismissible = survey.dismissible !== false;
@@ -30,6 +29,19 @@ export function SurveyCard({ survey, onClose, modal = true, onMinimize }: Survey
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [done, setDone] = useState(false);
+
+  // The thank-you closes after a delay sized to its text (see thanksDurationMs),
+  // pauses while hovered, and closes at once on click. `closed` guards against
+  // closing twice (timer firing after a click, or the reverse).
+  const thanksTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thanksRemaining = useRef(0);
+  const thanksStartedAt = useRef(0);
+  const thanksResult = useRef<SurveyResult | null>(null);
+  const closed = useRef(false);
+
+  useEffect(() => () => {
+    if (thanksTimer.current) clearTimeout(thanksTimer.current);
+  }, []);
 
   const question = questions[step];
   const isLast = step >= questions.length - 1;
@@ -60,9 +72,31 @@ export function SurveyCard({ survey, onClose, modal = true, onMinimize }: Survey
   }
 
   function finish() {
-    const result: SurveyResult = { answers: collected(), completed: true, dismissed: false };
+    thanksResult.current = { answers: collected(), completed: true, dismissed: false };
+    thanksRemaining.current = thanksDurationMs(survey.successMessage, survey.successPace);
     setDone(true);
-    setTimeout(() => onClose(result), SUCCESS_MS);
+    startThanksTimer();
+  }
+
+  function startThanksTimer() {
+    if (closed.current || thanksTimer.current) return;
+    thanksStartedAt.current = Date.now();
+    thanksTimer.current = setTimeout(closeThanks, Math.max(0, thanksRemaining.current));
+  }
+
+  function pauseThanksTimer() {
+    if (!thanksTimer.current) return;
+    clearTimeout(thanksTimer.current);
+    thanksTimer.current = null;
+    thanksRemaining.current -= Date.now() - thanksStartedAt.current;
+  }
+
+  function closeThanks() {
+    if (closed.current || !thanksResult.current) return;
+    closed.current = true;
+    if (thanksTimer.current) clearTimeout(thanksTimer.current);
+    thanksTimer.current = null;
+    onClose(thanksResult.current);
   }
 
   function dismiss() {
@@ -71,10 +105,17 @@ export function SurveyCard({ survey, onClose, modal = true, onMinimize }: Survey
 
   if (done) {
     return (
-      <div className="ms-card" role="dialog" aria-live="polite">
+      <div
+        className="ms-card ms-thanks"
+        role="dialog"
+        aria-live="polite"
+        onClick={closeThanks}
+        onMouseEnter={pauseThanksTimer}
+        onMouseLeave={startThanksTimer}
+      >
         <div className="ms-success">
           <span className="ms-success-check">✓</span>
-          <span>{survey.successMessage ?? "Thanks for your feedback!"}</span>
+          <span className="ms-success-text">{thanksMessage(survey.successMessage)}</span>
         </div>
       </div>
     );

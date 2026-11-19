@@ -248,6 +248,8 @@ const CSS = `
   padding: calc(var(--ms-spacing) * 1.5) var(--ms-spacing);
   text-align: center;
 }
+.ms-thanks { cursor: pointer; }
+.ms-success-text { max-width: 100%; overflow-wrap: anywhere; }
 .ms-success-check {
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--ms-accent); color: var(--ms-accent-text);
